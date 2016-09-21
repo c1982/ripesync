@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	rpsl_line_pattern   = `(.+):\W+(.+)`
-	ripe_db_domain_file = "O:\\ripe.db.domain\\ripe.db.domain"
-	ripe_db_mntner_file = "O:\\ripe.db.domain\\ripe.db.mntner"
-	ripe_db_route_file  = "O:\\ripe.db.domain\\ripe.db.route"
-	rip_db_name         = "ipstat"
+	rpsl_line_pattern    = `(.+):\W+(.+)`
+	ripe_db_domain_file  = "O:\\ripe.db.domain\\ripe.db.domain"
+	ripe_db_mntner_file  = "O:\\ripe.db.domain\\ripe.db.mntner"
+	ripe_db_route_file   = "O:\\ripe.db.domain\\ripe.db.route"
+	ripe_db_inetnum_file = "O:\\ripe.database\\ripe.db.inetnum"
+	rip_db_name          = "ipstat"
 )
 
 func main() {
@@ -36,7 +37,8 @@ func main() {
 
 	//SyncRipeDb(*session, ripe_db_domain_file, "domain:", "domain", InsertDomain)
 	//SyncRipeDb(*session, ripe_db_mntner_file, "mntner:", "mntner", InsertMntner)
-	SyncRipeDb(*session, ripe_db_mntner_file, "route:", "route", InsertMntner)
+	//SyncRipeDb(*session, ripe_db_mntner_file, "route:", "route", InsertMntner)
+	SyncRipeDb(*session, ripe_db_inetnum_file, "inetnum:", "inetnum", InsertInetNum)
 
 	log.Println("End")
 }
@@ -54,7 +56,7 @@ func SyncScanFile() {
 
 	for scan.Scan() {
 
-		i := Host{}
+		i := HostActivity{}
 		line := scan.Text()
 
 		if strings.HasSuffix(line, ",") {
@@ -76,8 +78,55 @@ func SyncScanFile() {
 	}
 }
 
-func AddRow(h Host) {
+func AddRow(h HostActivity) {
 	//Save to Mongo
+}
+
+func InsertInetNum(c mgo.Collection, aggrate string) {
+
+	var d = Netnum{}
+	d.Inetnum = parseRPSLValue(aggrate, "inetnum", "inetnum")
+	d.Netname = parseRPSLValue(aggrate, "inetnum", "netname")
+	d.Desc = parseRPSLValue(aggrate, "inetnum", "descr")
+	d.Country = parseRPSLValue(aggrate, "inetnum", "country")
+	d.Admin = parseRPSLValue(aggrate, "inetnum", "admin-c")
+	d.Tech = parseRPSLValue(aggrate, "inetnum", "tech-c")
+	d.Notify = parseRPSLValue(aggrate, "inetnum", "notify")
+	d.MntBy = parseRPSLValue(aggrate, "inetnum", "mnt-by")
+
+	if d.Inetnum != "" {
+
+		d.NetStart = GetIpBlock(d.Inetnum, 0)
+		d.NetEnd = GetIpBlock(d.Inetnum, 1)
+
+		err := c.Insert(&d)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		n := c.Database.C("hosts")
+
+		expand := ExpandRage(d.NetStart, d.NetEnd)
+
+		for i := 0; i <= len(expand)-1; i++ {
+
+			var h = Host{}
+			h.Ip = expand[i]
+			h.Admin = d.Admin
+			h.Country = d.Country
+			h.Inetnum = d.Inetnum
+			h.MntBy = d.MntBy
+			h.Netname = d.Netname
+			h.Notify = d.Notify
+
+			err = n.Insert(&h)
+
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
 }
 
 func InsertDomain(c mgo.Collection, aggrate string) {
@@ -109,6 +158,34 @@ func InsertMntner(c mgo.Collection, aggrate string) {
 
 	if d.Mntner != "" {
 		err := c.Insert(&d)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+func InsertRoute(c mgo.Collection, aggrate string) {
+
+	var d = Routing{}
+	d.Route = parseRPSLValue(aggrate, "route", "route")
+	d.Descr = parseRPSLValue(aggrate, "route", "descr")
+	d.Origin = parseRPSLValue(aggrate, "route", "origin")
+	d.MntBy = parseRPSLValue(aggrate, "route", "mnt-by")
+
+	if d.Route != "" {
+
+		expand, err := ExpandRoute(d.Route)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		for i := 0; i <= len(expand); i++ {
+
+		}
+
+		err = c.Insert(&d)
 
 		if err != nil {
 			fmt.Println(err)
@@ -198,4 +275,8 @@ func parseRPSLine(whoisLine string) string {
 	}
 
 	return ""
+}
+
+func GetIpBlock(inetnum string, i int) string {
+	return strings.TrimSpace(strings.Split(inetnum, "-")[i])
 }

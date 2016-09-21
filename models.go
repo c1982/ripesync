@@ -4,12 +4,17 @@ import (
 	"time"
 )
 
-type Company struct {
-	Inetnum string `json:"inetnum"`
-	Netname string `json:"netname"`
-	Desc    string `json:"desc"`
-	Country string `json:"country"`
-	MntBy   string `json:"mnt-by"`
+type Netnum struct {
+	Inetnum  string `json:"inetnum"`
+	Netname  string `json:"netname"`
+	Desc     string `json:"desc"`
+	Country  string `json:"country"`
+	Admin    string `json:"admin-c"`
+	Tech     string `json:"tech-c"`
+	Notify   string `json:"notify"`
+	MntBy    string `json:"mnt-by"`
+	NetStart string
+	NetEnd   string
 }
 
 type Domain struct {
@@ -20,6 +25,16 @@ type Domain struct {
 }
 
 type Host struct {
+	Ip      string
+	Inetnum string
+	Netname string
+	Country string
+	Admin   string
+	MntBy   string
+	Notify  string
+}
+
+type HostActivity struct {
 	Ip    string `json:"ip"`
 	Date  time.Time
 	Ports []Prt `json:"ports"`
@@ -46,4 +61,11 @@ type MntNer struct {
 	MntBy    string `json:"mnt-by"`
 	Created  string `json:"created"`
 	Modified string `json:"last-modified"`
+}
+
+type Routing struct {
+	Route  string `json:"route"`
+	Descr  string `json:"descr"`
+	Origin string `json:"origin"`
+	MntBy  string `json:"mnt-by"`
 }
