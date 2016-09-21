@@ -43,7 +43,7 @@ func main() {
 	log.Println("End")
 }
 
-func SyncScanFile() {
+func SyncScanFile(session mgo.Session) {
 
 	file, err := os.OpenFile(os.Args[1], os.O_RDONLY, os.ModeExclusive)
 	defer file.Close()
@@ -51,13 +51,14 @@ func SyncScanFile() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	c := session.DB(rip_db_name).C("hostactivity")
 
 	scan := bufio.NewScanner(file)
 
 	for scan.Scan() {
 
 		i := HostActivity{}
-		line := scan.Text()
+		line := strings.TrimSpace(scan.Text())
 
 		if strings.HasSuffix(line, ",") {
 			line = strings.TrimRight(line, ",")
@@ -72,14 +73,10 @@ func SyncScanFile() {
 			i.Date = time.Now()
 
 			if len(i.Ports) > 0 {
-				AddRow(i)
+				c.Insert(&i)
 			}
 		}
 	}
-}
-
-func AddRow(h HostActivity) {
-	//Save to Mongo
 }
 
 func InsertInetNum(c mgo.Collection, aggrate string) {
