@@ -69,3 +69,17 @@ type Routing struct {
 	Origin string `json:"origin"`
 	MntBy  string `json:"mnt-by"`
 }
+
+//aut-num
+type AsNumber struct {
+	AutNum    string
+	AsName    string
+	Org       string
+	MntRoutes string
+}
+
+//as-set
+type AsProfile struct {
+	AsSet string
+	Descr string
+}

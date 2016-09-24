@@ -15,10 +15,7 @@ import (
 
 const (
 	rpsl_line_pattern    = `(.+):\W+(.+)`
-	ripe_db_domain_file  = "O:\\ripe.db.domain\\ripe.db.domain"
-	ripe_db_mntner_file  = "O:\\ripe.db.domain\\ripe.db.mntner"
-	ripe_db_route_file   = "O:\\ripe.db.domain\\ripe.db.route"
-	ripe_db_inetnum_file = "O:\\ripe.database\\ripe.db.inetnum"
+	ripe_db_inetnum_file = "/home/ripe.db.inetnum"
 	rip_db_name          = "ipstat"
 )
 
@@ -34,10 +31,6 @@ func main() {
 	defer session.Close()
 
 	log.Println("Begin")
-
-	//SyncRipeDb(*session, ripe_db_domain_file, "domain:", "domain", InsertDomain)
-	//SyncRipeDb(*session, ripe_db_mntner_file, "mntner:", "mntner", InsertMntner)
-	//SyncRipeDb(*session, ripe_db_mntner_file, "route:", "route", InsertMntner)
 	SyncRipeDb(*session, ripe_db_inetnum_file, "inetnum:", "inetnum", InsertInetNum)
 
 	log.Println("End")
@@ -92,6 +85,14 @@ func InsertInetNum(c mgo.Collection, aggrate string) {
 	d.MntBy = parseRPSLValue(aggrate, "inetnum", "mnt-by")
 
 	if d.Inetnum != "" {
+
+		d.Country = strings.ToUpper(d.Country)
+
+		if d.Country != "TR" {
+			return
+		}
+
+		log.Println(d.Netname + ":" + d.Inetnum)
 
 		d.NetStart = GetIpBlock(d.Inetnum, 0)
 		d.NetEnd = GetIpBlock(d.Inetnum, 1)
