@@ -34,6 +34,7 @@ type Host struct {
 }
 
 type HostActivity struct {
+	Asn   string
 	Ip    string `json:"ip"`
 	Date  time.Time
 	Ports []Prt `json:"ports"`
@@ -98,12 +99,19 @@ type Announcement struct {
 }
 
 type AnnouncedData struct {
-	Resource       string   `json:"resource"`
-	Prefixes       []Prefix `json:"prefixes"`
-	QueryStarttime string   `json:"query_starttime"`
-	LatestTime     string   `json:"latest_time"`
-	QueryEndtime   string   `json:"query_endtime"`
-	EarliestTime   string   `json:"earliest_time"`
+	Resource       string       `json:"resource"`
+	Prefixes       []Prefix     `json:"prefixes"`
+	Resources      ResourceData `json:"resources"`
+	QueryStarttime string       `json:"query_starttime"`
+	LatestTime     string       `json:"latest_time"`
+	QueryEndtime   string       `json:"query_endtime"`
+	EarliestTime   string       `json:"earliest_time"`
+}
+
+type ResourceData struct {
+	IPv6      []string `json:"ipv6"`
+	ASNumbers []string `json:"asn"`
+	IPv4      []string `json:"ipv4"`
 }
 
 type Prefix struct {

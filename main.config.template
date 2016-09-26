@@ -1,0 +1,21 @@
+rate=10000
+randomize-hosts = true
+seed=4098680771359436427
+shard=1/1
+banners=true
+source-ip 192.168.1.200
+ping=true
+http-user-agent="Mozilla/5.0 (Windows NT 6.3; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0"
+nocapture=cert
+nocapture=heartbleed
+nocapture=title
+nocapture=html
+min-packet=60
+adapter-port=61234
+output-format=json
+show = open,,
+output-filename=list.json
+retries = 0
+ports = 21,22,23,80,161,8083,1433,2222,2082,2083,2086,2087,3389,5432,5985,8172,8443,9001,9715,9714,25,587,110,143,3306,53,5433,27017,6379,5060,8000,10000,8787
+open-only = true
+#IP RANGE

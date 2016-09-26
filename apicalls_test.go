@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 )
 
@@ -127,6 +126,62 @@ const (
         "earliest_time": "2000-08-01T00:00:00"
     }
 }`
+
+	TEXT_JSON_RESOURCE_DATA = `{
+    "status": "ok", 
+    "server_id": "stat-app9", 
+    "status_code": 200, 
+    "version": "0.2", 
+    "cached": false, 
+    "see_also": [], 
+    "time": "2016-09-26T14:57:07.247951", 
+    "messages": [], 
+    "data_call_status": "supported - connecting to ursa", 
+    "process_time": 918, 
+    "build_version": "2016.9.26.140", 
+    "query_id": "7ddfc572-83f9-11e6-b268-0050568836e2", 
+    "data": {
+        "query_time": "2016-09-25T00:00:00", 
+        "resources": {
+            "ipv6": [
+                "2001:678:1a4::/48", 
+                "2001:67c:464::/48", 
+                "2001:67c:4f4::/48", 
+                "2001:67c:5e0::/48", 
+                "2001:67c:68c::/48", 
+                "2001:67c:6c0::/48", 
+                "2001:67c:1154::/48", 
+                "2001:67c:11b8::/48", 
+                "2001:67c:11ec::/48", 
+                "2001:67c:12a4::/48"                
+            ], 
+            "asn": [
+                "1885", 
+                "2592", 
+                "2600", 
+                "2872", 
+                "3188", 
+                "5422", 
+                "5458", 
+                "5474", 
+                "6707", 
+                "6755"                              
+            ], 
+            "ipv4": [
+                "5.2.80.0/21", 
+                "5.11.128.0/17", 
+                "5.23.120.0/21", 
+                "5.24.0.0/14", 
+                "5.44.80.0/20", 
+                "5.44.144.0/20", 
+                "5.46.0.0/15", 
+                "5.63.32.0/19", 
+                "5.104.0.0/20", 
+                "5.159.248.0/21"                          
+            ]
+        }
+    }
+}`
 )
 
 /*
@@ -144,6 +199,15 @@ func TestProdGetJSonData(t *testing.T) {
 
 	//t.Log(text)
 }
+
+func TestGenerateRangeArrayForMassscan(t *testing.T) {
+	list := getScanRange("AS43260")
+
+	for i := 0; i < len(list); i++ {
+		fmt.Println(list[i])
+	}
+}
+
 */
 
 func TestAnouncmentUnMarshalling(t *testing.T) {
@@ -168,10 +232,34 @@ func TestAnouncmentUnMarshalling(t *testing.T) {
 	*/
 }
 
-func TestGenerateRangeArray(t *testing.T) {
-	list := getScanRange("AS43260")
+func TestResourcesUnMarshalling(t *testing.T) {
 
-	for i := 0; i < len(list); i++ {
-		fmt.Println(list[i])
+	anon := Announcement{}
+	err := json.Unmarshal([]byte(TEXT_JSON_RESOURCE_DATA), &anon)
+
+	if err != nil {
+		t.Errorf("Unmarshalling Error:", err)
 	}
+
+	excpected_lenght := 10
+	asnumber_lenght := len(anon.Data.Resources.ASNumbers)
+
+	if asnumber_lenght != excpected_lenght {
+		t.Error("as number array error")
+	}
+
+	ipv4_lenght := len(anon.Data.Resources.IPv4)
+	if ipv4_lenght != excpected_lenght {
+		t.Error("ipv4 array error")
+	}
+
+	ipv6_lenght := len(anon.Data.Resources.IPv6)
+	if ipv6_lenght != excpected_lenght {
+		t.Error("ipv6 array error")
+	}
+
+	for _, prf := range anon.Data.Resources.ASNumbers {
+		t.Log("AS" + prf)
+	}
+
 }

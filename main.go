@@ -31,8 +31,15 @@ func main() {
 
 	log.Println("Begin")
 
-	SyncScanFile("O:\\ripe.database\\list.json", *session)
+	//Flag Scan
+	//Generate Scan Config
 
+	//Execute Scan
+
+	//Insert Scan Result
+	SyncScanFile("O:\\ripe.database\\list.json", *session, "")
+
+	//Flash RipeSync
 	//Sync AS
 	//SyncRipeDb(*session, "O:\\ripe.database\\ripe.db.aut-num", "aut-num:", "autnums", InsertAutNum)
 
@@ -42,7 +49,7 @@ func main() {
 	log.Println("End")
 }
 
-func SyncScanFile(scanFile string, session mgo.Session) {
+func SyncScanFile(scanFile string, session mgo.Session, asnum string) {
 
 	file, err := os.OpenFile(scanFile, os.O_RDONLY, 0)
 	defer file.Close()
@@ -83,7 +90,7 @@ func SyncScanFile(scanFile string, session mgo.Session) {
 			fmt.Println(err)
 			continue
 		}
-
+		h.Asn = asnum
 		h.Date = time.Now()
 
 		if len(h.Ports) > 0 {

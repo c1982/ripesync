@@ -9,6 +9,7 @@ import (
 
 const (
 	ANNOUNCED_URL = "https://stat.ripe.net/data/announced-prefixes/data.json?resource=%s"
+	RESOURCES_URL = "https://stat.ripe.net/data/country-resource-list/data.json?resource=%s"
 )
 
 func getJsonData(uri string) (string, error) {
@@ -34,7 +35,24 @@ func getPrefixes(autnum string) (Announcement, error) {
 	anon := Announcement{}
 	uri := fmt.Sprintf(ANNOUNCED_URL, autnum)
 
-	fmt.Println(uri)
+	jsonData, err := getJsonData(uri)
+
+	if err != nil {
+		return anon, err
+	}
+
+	err = json.Unmarshal([]byte(jsonData), &anon)
+
+	if err != nil {
+		return anon, err
+	}
+
+	return anon, err
+}
+
+func getAsNumbers(country string) (AnnouncedData, error) {
+	anon := Announcement{}
+	uri := fmt.Sprintf(RESOURCES_URL, autnum)
 
 	jsonData, err := getJsonData(uri)
 
