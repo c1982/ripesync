@@ -65,3 +65,9 @@ func nextIP(ip net.IP) net.IP {
 	}
 	return next
 }
+
+func isCidrIpV4(ipaddr string) bool {
+	ip, _, _ := net.ParseCIDR(ipaddr)
+
+	return ip.To4() != nil
+}

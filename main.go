@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	rpsl_line_pattern    = `(.+):\W+(.+)`
-	ripe_db_inetnum_file = "/home/ripe.db.inetnum"
-	rip_db_name          = "ipstat"
+	rpsl_line_pattern = `(.+):\W+(.+)`
+	rip_db_name       = "ipstat"
 )
 
 func main() {
@@ -31,42 +30,67 @@ func main() {
 	defer session.Close()
 
 	log.Println("Begin")
-	SyncRipeDb(*session, ripe_db_inetnum_file, "inetnum:", "inetnum", InsertInetNum)
+
+	SyncScanFile("O:\\ripe.database\\list.json", *session)
+
+	//Sync AS
+	//SyncRipeDb(*session, "O:\\ripe.database\\ripe.db.aut-num", "aut-num:", "autnums", InsertAutNum)
+
+	//Sync AS-Set
+	//SyncRipeDb(*session, "ripe.db.aut-num", "aut-num:", "autnums", InsertAutNum)
 
 	log.Println("End")
 }
 
-func SyncScanFile(session mgo.Session) {
+func SyncScanFile(scanFile string, session mgo.Session) {
 
-	file, err := os.OpenFile(os.Args[1], os.O_RDONLY, os.ModeExclusive)
+	file, err := os.OpenFile(scanFile, os.O_RDONLY, 0)
 	defer file.Close()
 
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
+
 	c := session.DB(rip_db_name).C("hostactivity")
 
 	scan := bufio.NewScanner(file)
+	scan.Split(bufio.ScanLines)
 
 	for scan.Scan() {
 
-		i := HostActivity{}
 		line := strings.TrimSpace(scan.Text())
+
+		if len(line) > 2048 {
+			fmt.Println(line)
+			continue
+		}
+
+		if line == "{finished: 1}" {
+			continue
+		}
 
 		if strings.HasSuffix(line, ",") {
 			line = strings.TrimRight(line, ",")
 		}
 
+		h := HostActivity{}
 		byteLine := []byte(line)
-		err = json.Unmarshal(byteLine, &i)
+
+		err = json.Unmarshal(byteLine, &h)
 
 		if err != nil {
-			fmt.Println(err.Error())
-		} else {
-			i.Date = time.Now()
+			fmt.Println(err)
+			continue
+		}
 
-			if len(i.Ports) > 0 {
-				c.Insert(&i)
+		h.Date = time.Now()
+
+		if len(h.Ports) > 0 {
+			err = c.Insert(&h)
+
+			if err != nil {
+				fmt.Println(err)
 			}
 		}
 	}
@@ -102,28 +126,30 @@ func InsertInetNum(c mgo.Collection, aggrate string) {
 		if err != nil {
 			fmt.Println(err)
 		}
+		/*
+			n := c.Database.C("hosts")
 
-		n := c.Database.C("hosts")
+			expand := ExpandRage(d.NetStart, d.NetEnd)
 
-		expand := ExpandRage(d.NetStart, d.NetEnd)
+			for i := 0; i <= len(expand)-1; i++ {
 
-		for i := 0; i <= len(expand)-1; i++ {
+				var h = Host{}
+				h.Ip = expand[i]
+				h.Admin = d.Admin
+				h.Country = d.Country
+				h.Inetnum = d.Inetnum
+				h.MntBy = d.MntBy
+				h.Netname = d.Netname
+				h.Notify = d.Notify
 
-			var h = Host{}
-			h.Ip = expand[i]
-			h.Admin = d.Admin
-			h.Country = d.Country
-			h.Inetnum = d.Inetnum
-			h.MntBy = d.MntBy
-			h.Netname = d.Netname
-			h.Notify = d.Notify
+				err = n.Insert(&h)
 
-			err = n.Insert(&h)
+				if err != nil {
+					fmt.Println(err)
+				}
 
-			if err != nil {
-				fmt.Println(err)
 			}
-		}
+		*/
 	}
 }
 
@@ -173,20 +199,85 @@ func InsertRoute(c mgo.Collection, aggrate string) {
 
 	if d.Route != "" {
 
-		expand, err := ExpandRoute(d.Route)
+		_, err := ExpandRoute(d.Route)
 
 		if err != nil {
 			fmt.Println(err)
-		}
-
-		for i := 0; i <= len(expand); i++ {
-
 		}
 
 		err = c.Insert(&d)
 
 		if err != nil {
 			fmt.Println(err)
+		}
+	}
+}
+
+func InsertAutNum(c mgo.Collection, aggrate string) {
+
+	var d = AsNumber{}
+	d.AutNum = parseRPSLValue(aggrate, "aut-num", "aut-num") //AS Number
+	d.AsName = parseRPSLValue(aggrate, "aut-num", "as-name")
+	d.MntRoutes = parseRPSLValue(aggrate, "aut-num", "mnt-routes")
+	d.Org = parseRPSLValue(aggrate, "aut-num", "org")
+
+	if d.AutNum == "AS43260" {
+		fmt.Println(d.AutNum)
+
+		err := c.Insert(&d)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		//Get Prefixes from Ripe
+		anon, err := getPrefixes(d.AutNum)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println(len(anon.Data.Prefixes))
+
+		if len(anon.Data.Prefixes) <= 0 {
+			return
+		}
+
+		n := c.Database.C("hosts")
+
+		for _, prf := range anon.Data.Prefixes {
+
+			if isCidrIpV4(prf.Name) {
+				fmt.Println(prf.Name)
+
+				//Expand prefix ip address
+				prefixIpList, err := ExpandRoute(prf.Name)
+
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				for i := 0; i < len(prefixIpList); i++ {
+
+					//Insert IP
+					h := Host{}
+					h.Ip = prefixIpList[i]
+					h.AsName = d.AsName
+					h.AutNum = d.AutNum
+					h.MntRoutes = d.MntRoutes
+					h.Org = d.Org
+					h.Prfx = prf.Name
+
+					err = n.Insert(&h)
+
+					if err != nil {
+						fmt.Println(err)
+					}
+
+				}
+			}
 		}
 	}
 }
