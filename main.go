@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -47,7 +48,6 @@ func main() {
 		}
 
 		log.Printf("Country:", *country)
-
 		log.Println("Begin as scanning.")
 
 		//begin
@@ -86,6 +86,7 @@ func ScanAsNumbers(country string, session mgo.Session) {
 	log.Println("Total IPv6 Prefix :", asns.Ipv6Prefix)
 	log.Println("Total IPv4 Prefix :", asns.Ipv4Prefix)
 
+	//Save
 	err = session.DB(rip_db_name).C("asn_country_stats").Insert(&asns)
 
 	if err != nil {
@@ -95,6 +96,11 @@ func ScanAsNumbers(country string, session mgo.Session) {
 	for _, v := range anon.Data.Resources.ASNumbers {
 
 		asn := fmt.Sprintf("AS%s", v)
+
+		if asn == "AS9121" {
+			continue
+		}
+
 		log.Println("Scanning:", asn)
 
 		scanoutput := fmt.Sprintf("%s.json", asn)
@@ -550,6 +556,10 @@ func WriteAllText(filePath string, text string) error {
 }
 
 func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, session mgo.Session) {
+
+	var db = session.DB(rip_db_name)
+	var genericCount = 0
+
 	sm := Summary{}
 	sm.Date = time.Now()
 	sm.Asn = asn
@@ -564,7 +574,39 @@ func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, sessio
 	sm.TotalIpv4 = GetTotalIpCountByIpv4Prefixes(ipv4Prefixes)
 	sm.ActiveIp4 = 0
 
-	err := session.DB(rip_db_name).C("reports").Insert(&sm)
+	err := db.Run(bson.M{"eval": fmt.Sprintf("GetActiveIpCountByAsn(%s);", asn)}, &genericCount)
+
+	if err == nil {
+		sm.ActiveIp4 = genericCount
+	}
+
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",109,128);", asn)}, &genericCount)
+
+	if err == nil {
+		sm.Windows = genericCount
+	}
+
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",48,64);", asn)}, &genericCount)
+
+	if err == nil {
+		sm.Linux = genericCount
+	}
+
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",235,254);", asn)}, &genericCount)
+
+	if err == nil {
+		sm.RouterOs = genericCount
+	}
+
+	//FTP
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByPortNumber(\"%s\",21);", asn)}, &genericCount)
+
+	if err == nil {
+		sm.Ftp = genericCount
+	}
+
+	//Save
+	err = db.C("reports").Insert(&sm)
 
 	if err != nil {
 		log.Println(err)

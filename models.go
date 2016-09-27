@@ -136,9 +136,9 @@ type Summary struct {
 	TotalIpv4   int
 	ActiveIp4   int
 
-	Windows int
-	Linux   int
-	OtherOs int
+	Windows  int
+	Linux    int
+	RouterOs int
 
 	Ftp        int
 	Ssh        int
