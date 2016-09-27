@@ -3,9 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -16,37 +19,90 @@ import (
 const (
 	rpsl_line_pattern = `(.+):\W+(.+)`
 	rip_db_name       = "ipstat"
+	template_file     = "main.config.template"
 )
 
 func main() {
 
+	country := flag.String("country", "TR", "Country Code: TR, IT, DE etc.")
+	scanAsn := flag.Bool("scan", true, "Scan Country As Numbers")
+	syncdb := flag.Bool("sync", false, "Check Ripe Database file and save database.")
+	autnum := flag.String("autnum", "ripe.db.aut-num", "Ripe aut-num db file.")
+
 	session, err := mgo.Dial("localhost")
+
+	if err != nil {
+		log.Println("Can't connect mongodb.")
+		panic(err)
+	}
+
+	session.DB(rip_db_name).Login("admin", "")
+	session.SetMode(mgo.Monotonic, true)
+	defer session.Close()
+
+	if *scanAsn {
+		if *country == "" {
+			log.Println("Required country parameter.")
+			return
+		}
+
+		log.Printf("Country:", *country)
+
+		log.Println("Begin as scanning.")
+		ScanAsNumbers(*country, *session)
+		log.Println("End as scanning.")
+	}
+
+	if *syncdb {
+		if *autnum == "" {
+			log.Println("Required autnum parameter.")
+			return
+		}
+
+		log.Println("Begin autnum sync.")
+		SyncRipeDb(*session, *autnum, "aut-num:", "autnums", InsertAutNum)
+		log.Println("End autnum sync.")
+	}
+}
+
+func ScanAsNumbers(country string, session mgo.Session) {
+	anon, err := getAsNumbers(country)
 
 	if err != nil {
 		panic(err)
 	}
 
-	session.SetMode(mgo.Monotonic, true)
-	defer session.Close()
+	log.Println("AS number count:", len(anon.Data.Resources.ASNumbers))
 
-	log.Println("Begin")
+	for _, v := range anon.Data.Resources.ASNumbers {
 
-	//Flag Scan
-	//Generate Scan Config
+		asn := fmt.Sprintf("AS%s", v)
+		log.Println("Scanning: ", asn)
 
-	//Execute Scan
+		//asnFile := fmt.Sprintf("%s.config", asn)
+		scanoutput := fmt.Sprintf("%s.json", asn)
+		cnfFile, err := GenerateConfig(asn)
 
-	//Insert Scan Result
-	SyncScanFile("O:\\ripe.database\\list.json", *session, "")
+		if err != nil {
+			//deleteFile(asnFile)
+			log.Println("Config file cannot genereted.", err)
+			continue
+		}
 
-	//Flash RipeSync
-	//Sync AS
-	//SyncRipeDb(*session, "O:\\ripe.database\\ripe.db.aut-num", "aut-num:", "autnums", InsertAutNum)
+		//masscan
+		err = executeScan(cnfFile, scanoutput)
+		if err != nil {
+			log.Println("Scan error: ", err)
+			//deleteFile(asnFile)
+			continue
+		}
 
-	//Sync AS-Set
-	//SyncRipeDb(*session, "ripe.db.aut-num", "aut-num:", "autnums", InsertAutNum)
+		//save mongodb
+		SyncScanFile(scanoutput, session, asn)
 
-	log.Println("End")
+		//deleteFile(asnFile)
+		//deleteFile(scanoutput)
+	}
 }
 
 func SyncScanFile(scanFile string, session mgo.Session, asnum string) {
@@ -69,7 +125,6 @@ func SyncScanFile(scanFile string, session mgo.Session, asnum string) {
 		line := strings.TrimSpace(scan.Text())
 
 		if len(line) > 2048 {
-			fmt.Println(line)
 			continue
 		}
 
@@ -228,64 +283,61 @@ func InsertAutNum(c mgo.Collection, aggrate string) {
 	d.MntRoutes = parseRPSLValue(aggrate, "aut-num", "mnt-routes")
 	d.Org = parseRPSLValue(aggrate, "aut-num", "org")
 
-	if d.AutNum == "AS43260" {
-		fmt.Println(d.AutNum)
+	err := c.Insert(&d)
 
-		err := c.Insert(&d)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+	//Get Prefixes from Ripe
+	anon, err := getPrefixes(d.AutNum)
 
-		//Get Prefixes from Ripe
-		anon, err := getPrefixes(d.AutNum)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+	fmt.Println(len(anon.Data.Prefixes))
 
-		fmt.Println(len(anon.Data.Prefixes))
+	if len(anon.Data.Prefixes) <= 0 {
+		return
+	}
 
-		if len(anon.Data.Prefixes) <= 0 {
-			return
-		}
+	n := c.Database.C("hosts")
 
-		n := c.Database.C("hosts")
+	for _, prf := range anon.Data.Prefixes {
 
-		for _, prf := range anon.Data.Prefixes {
+		if isCidrIpV4(prf.Name) {
+			fmt.Println(prf.Name)
 
-			if isCidrIpV4(prf.Name) {
-				fmt.Println(prf.Name)
+			//Expand prefix ip address
+			prefixIpList, err := ExpandRoute(prf.Name)
 
-				//Expand prefix ip address
-				prefixIpList, err := ExpandRoute(prf.Name)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			for i := 0; i < len(prefixIpList); i++ {
+
+				//Insert IP
+				h := Host{}
+				h.Ip = prefixIpList[i]
+				h.AsName = d.AsName
+				h.AutNum = d.AutNum
+				h.MntRoutes = d.MntRoutes
+				h.Org = d.Org
+				h.Prfx = prf.Name
+
+				err = n.Insert(&h)
 
 				if err != nil {
 					fmt.Println(err)
 				}
 
-				for i := 0; i < len(prefixIpList); i++ {
-
-					//Insert IP
-					h := Host{}
-					h.Ip = prefixIpList[i]
-					h.AsName = d.AsName
-					h.AutNum = d.AutNum
-					h.MntRoutes = d.MntRoutes
-					h.Org = d.Org
-					h.Prfx = prf.Name
-
-					err = n.Insert(&h)
-
-					if err != nil {
-						fmt.Println(err)
-					}
-
-				}
 			}
 		}
+
 	}
 }
 
@@ -375,4 +427,105 @@ func parseRPSLine(whoisLine string) string {
 
 func GetIpBlock(inetnum string, i int) string {
 	return strings.TrimSpace(strings.Split(inetnum, "-")[i])
+}
+
+func GenerateConfig(asn string) (string, error) {
+
+	fileName := fmt.Sprintf("%s.config", asn)
+
+	tmplTxt, err := readTemplateFile()
+
+	if err != nil {
+		log.Println("Read template error.")
+		return "", err
+	}
+
+	prfx, err := getRangeArrayForConfig(asn)
+
+	if err != nil {
+		return "", err
+	}
+
+	log.Println("Prefix count is:", len(prfx))
+
+	if len(prfx) <= 0 {
+		msg := fmt.Sprintf("Prefixes is empty this ASN: %s", asn)
+		return "", fmt.Errorf(msg)
+	}
+
+	rangeLines := strings.Join(prfx, "\n")
+	tmplTxt = fmt.Sprintf("%s\n%s", tmplTxt, rangeLines)
+
+	err = CreateFile(fileName)
+
+	if err != nil {
+		log.Println("File create error:", fileName)
+		return "", err
+	}
+
+	err = WriteAllText(fileName, tmplTxt)
+
+	if err != nil {
+		log.Println("File write error:", fileName)
+		return "", err
+	}
+
+	return fileName, err
+}
+
+func readTemplateFile() (string, error) {
+	return readFile(template_file)
+}
+
+func readFile(filePath string) (string, error) {
+	file, err := ioutil.ReadFile(filePath)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(file), err
+}
+
+func deleteFile(filePath string) error {
+	return os.Remove(filePath)
+}
+
+func executeScan(cnfFile string, outputfile string) error {
+
+	configFile := fmt.Sprintf("/home/masscan/bin/%s", cnfFile)
+	outputFileName := fmt.Sprintf("/home/masscan/bin/%s", outputfile)
+
+	log.Printf("Waiting for scan. File: ", cnfFile)
+	out, err := exec.Command("/home/masscan/bin/masscan", "--conf", configFile, "-oJ", outputFileName).Output()
+	log.Printf("Output: %s", out)
+
+	return err
+}
+
+func CreateFile(filePath string) error {
+	cnf, err := os.Create(filePath)
+	defer cnf.Close()
+
+	return err
+}
+
+func WriteAllText(filePath string, text string) error {
+	var file, err = os.OpenFile(filePath, os.O_WRONLY, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	_, err = file.WriteString(text)
+
+	if err != nil {
+		return err
+	}
+
+	err = file.Sync()
+
+	return err
 }

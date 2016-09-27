@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -35,6 +36,8 @@ func getPrefixes(autnum string) (Announcement, error) {
 	anon := Announcement{}
 	uri := fmt.Sprintf(ANNOUNCED_URL, autnum)
 
+	log.Println(uri)
+
 	jsonData, err := getJsonData(uri)
 
 	if err != nil {
@@ -50,9 +53,11 @@ func getPrefixes(autnum string) (Announcement, error) {
 	return anon, err
 }
 
-func getAsNumbers(country string) (AnnouncedData, error) {
+func getAsNumbers(country string) (Announcement, error) {
 	anon := Announcement{}
-	uri := fmt.Sprintf(RESOURCES_URL, autnum)
+	uri := fmt.Sprintf(RESOURCES_URL, country)
+
+	log.Println(uri)
 
 	jsonData, err := getJsonData(uri)
 
@@ -69,21 +74,21 @@ func getAsNumbers(country string) (AnnouncedData, error) {
 	return anon, err
 }
 
-func getScanRange(autnum string) []string {
+func getRangeArrayForConfig(autnum string) ([]string, error) {
 
 	ipcidr := []string{}
 	anon, err := getPrefixes(autnum)
 
 	if err != nil {
-		return ipcidr
+		return ipcidr, err
 	}
 
 	for _, prf := range anon.Data.Prefixes {
 		if isCidrIpV4(prf.Name) {
-			ipcidr = append(ipcidr, "range="+prf.Name)
+			ipcidr = append(ipcidr, fmt.Sprintf("range=%s", prf.Name))
 		}
 	}
 
-	return ipcidr
+	return ipcidr, err
 
 }

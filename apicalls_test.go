@@ -2,6 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	_ "io"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -257,9 +260,57 @@ func TestResourcesUnMarshalling(t *testing.T) {
 	if ipv6_lenght != excpected_lenght {
 		t.Error("ipv6 array error")
 	}
+}
 
-	for _, prf := range anon.Data.Resources.ASNumbers {
-		t.Log("AS" + prf)
+func TestReadTemplateFile(t *testing.T) {
+	fileTxt, err := readTemplateFile()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if fileTxt == "" {
+		t.Error("File cannot be read.")
+	}
+}
+
+func TestGenerateConfigFile(t *testing.T) {
+	fileTxt, _ := readTemplateFile()
+
+	configFile, err := GenerateConfig("AS43260")
+
+	t.Logf("Config file name:", configFile)
+
+	if err != nil {
+		t.Errorf("Generate config error:", err)
+	}
+
+	if fileTxt == "" {
+		t.Error("Template file is empty.")
+	}
+
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		t.Fatalf("File not found:", configFile, err)
+	}
+
+	configTxt, err := readFile(configFile)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if configTxt == "" {
+		t.Errorf("ASN config is empty", configFile)
+	}
+
+	if strings.HasSuffix(configTxt, "#IP RANGE") {
+		t.Error("Cannot append prefix list in config file.")
+	}
+
+	err = deleteFile(configFile)
+
+	if err != nil {
+		t.Errorf("ASN config delete error:", err, configFile)
 	}
 
 }
