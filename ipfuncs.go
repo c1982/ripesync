@@ -19,6 +19,32 @@ func ExpandRoute(cidr string) ([]string, error) {
 	return ips[1 : len(ips)-1], nil
 }
 
+func RouteCount(cidr string) int {
+	count := 0
+	ip, ipnet, err := net.ParseCIDR(cidr)
+
+	if err != nil {
+		return count
+	}
+
+	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
+		count++
+	}
+
+	return count - 1
+}
+
+func GetTotalIpCountByIpv4Prefixes(cidrs []Prefix) int {
+
+	count := 0
+
+	for i := 0; i < len(cidrs); i++ {
+		count += RouteCount(cidrs[i].Name)
+	}
+
+	return count
+}
+
 func inc(ip net.IP) {
 	for j := len(ip) - 1; j >= 0; j-- {
 		ip[j]++

@@ -31,26 +31,34 @@ func getJsonData(uri string) (string, error) {
 	return string(jsondata), err
 }
 
-func getPrefixes(autnum string) (Announcement, error) {
+func getPrefixes(asn string) (ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, err error) {
 
 	anon := Announcement{}
-	uri := fmt.Sprintf(ANNOUNCED_URL, autnum)
+	uri := fmt.Sprintf(ANNOUNCED_URL, asn)
 
 	log.Println(uri)
 
 	jsonData, err := getJsonData(uri)
 
 	if err != nil {
-		return anon, err
+		return nil, nil, err
 	}
 
 	err = json.Unmarshal([]byte(jsonData), &anon)
 
 	if err != nil {
-		return anon, err
+		return nil, nil, err
 	}
 
-	return anon, err
+	for _, p := range anon.Data.Prefixes {
+		if isCidrIpV4(p.Name) {
+			ipv4Prefixes = append(ipv4Prefixes, p)
+		} else {
+			ipv6Prefixes = append(ipv6Prefixes, p)
+		}
+	}
+
+	return ipv4Prefixes, ipv6Prefixes, err
 }
 
 func getAsNumbers(country string) (Announcement, error) {
@@ -74,21 +82,14 @@ func getAsNumbers(country string) (Announcement, error) {
 	return anon, err
 }
 
-func getRangeArrayForConfig(autnum string) ([]string, error) {
+func GenerateRangeForConfigFile(autnum string, prefixes []Prefix) []string {
 
 	ipcidr := []string{}
-	anon, err := getPrefixes(autnum)
 
-	if err != nil {
-		return ipcidr, err
+	for _, prf := range prefixes {
+		ipcidr = append(ipcidr, fmt.Sprintf("range=%s", prf.Name))
 	}
 
-	for _, prf := range anon.Data.Prefixes {
-		if isCidrIpV4(prf.Name) {
-			ipcidr = append(ipcidr, fmt.Sprintf("range=%s", prf.Name))
-		}
-	}
-
-	return ipcidr, err
+	return ipcidr
 
 }

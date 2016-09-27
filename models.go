@@ -123,3 +123,61 @@ type TimeLine struct {
 	EndTime   string `json:"endtime"`
 	StartTime string `json:"starttime"`
 }
+
+type Summary struct {
+	Date        time.Time
+	Asn         string
+	AsnName     string
+	Description string
+
+	TotalPrefix int
+	Ipv4Prefix  int
+	Ipv6Prefix  int
+	TotalIpv4   int
+	ActiveIp4   int
+
+	Windows int
+	Linux   int
+	OtherOs int
+
+	Ftp        int
+	Ssh        int
+	Telnet     int
+	Smtp       int
+	Dns        int
+	Http       int
+	Pop3       int
+	Imap       int
+	Snmp       int
+	Rdp        int
+	Sip        int
+	PowerShell int
+	WebDeploy  int
+
+	WestaCp      int
+	DirectAdmin  int
+	Plesk        int
+	WebsitePanel int
+	MaestroPanel int
+	CPanel       int
+	CPanelSSL    int
+	CPanelWHM    int
+	CPanelWHMSSL int
+	Ajenti       int
+	Webmin       int
+	HstCntr      int
+
+	MsSQL      int
+	MySQL      int
+	MongoDB    int
+	PostgreSQL int
+	Redis      int
+}
+
+type TotalAsnStat struct {
+	Country    string
+	AsnCount   int
+	Ipv4Prefix int
+	Ipv6Prefix int
+	Date       time.Time
+}

@@ -49,7 +49,10 @@ func main() {
 		log.Printf("Country:", *country)
 
 		log.Println("Begin as scanning.")
+
+		//begin
 		ScanAsNumbers(*country, *session)
+
 		log.Println("End as scanning.")
 	}
 
@@ -72,16 +75,34 @@ func ScanAsNumbers(country string, session mgo.Session) {
 		panic(err)
 	}
 
-	log.Println("AS number count:", len(anon.Data.Resources.ASNumbers))
+	asns := TotalAsnStat{}
+	asns.Country = country
+	asns.Date = time.Now()
+	asns.AsnCount = len(anon.Data.Resources.ASNumbers)
+	asns.Ipv6Prefix = len(anon.Data.Resources.IPv6)
+	asns.Ipv4Prefix = len(anon.Data.Resources.IPv4)
+
+	log.Println("Total ASN :", asns.AsnCount)
+	log.Println("Total IPv6 Prefix :", asns.Ipv6Prefix)
+	log.Println("Total IPv4 Prefix :", asns.Ipv4Prefix)
+
+	err = session.DB(rip_db_name).C("asn_country_stats").Insert(&asns)
+
+	if err != nil {
+		panic(err)
+	}
 
 	for _, v := range anon.Data.Resources.ASNumbers {
 
 		asn := fmt.Sprintf("AS%s", v)
-		log.Println("Scanning: ", asn)
+		log.Println("Scanning:", asn)
 
-		//asnFile := fmt.Sprintf("%s.config", asn)
 		scanoutput := fmt.Sprintf("%s.json", asn)
-		cnfFile, err := GenerateConfig(asn)
+		ipv4prefixes, ipv6prefixes, err := getPrefixes(asn)
+
+		log.Println("Prefix count is:", len(ipv4prefixes))
+
+		cnfFile, err := GenerateConfig(asn, ipv4prefixes)
 
 		if err != nil {
 			//deleteFile(asnFile)
@@ -102,6 +123,10 @@ func ScanAsNumbers(country string, session mgo.Session) {
 
 		//deleteFile(asnFile)
 		//deleteFile(scanoutput)
+
+		//Save Summary
+		saveReport(asn, ipv4prefixes, ipv6prefixes, session)
+
 	}
 }
 
@@ -291,22 +316,22 @@ func InsertAutNum(c mgo.Collection, aggrate string) {
 	}
 
 	//Get Prefixes from Ripe
-	anon, err := getPrefixes(d.AutNum)
+	ipv4prefixes, _, err := getPrefixes(d.AutNum)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println(len(anon.Data.Prefixes))
+	fmt.Println(len(ipv4prefixes))
 
-	if len(anon.Data.Prefixes) <= 0 {
+	if len(ipv4prefixes) <= 0 {
 		return
 	}
 
 	n := c.Database.C("hosts")
 
-	for _, prf := range anon.Data.Prefixes {
+	for _, prf := range ipv4prefixes {
 
 		if isCidrIpV4(prf.Name) {
 			fmt.Println(prf.Name)
@@ -429,7 +454,7 @@ func GetIpBlock(inetnum string, i int) string {
 	return strings.TrimSpace(strings.Split(inetnum, "-")[i])
 }
 
-func GenerateConfig(asn string) (string, error) {
+func GenerateConfig(asn string, prefixes []Prefix) (string, error) {
 
 	fileName := fmt.Sprintf("%s.config", asn)
 
@@ -440,20 +465,14 @@ func GenerateConfig(asn string) (string, error) {
 		return "", err
 	}
 
-	prfx, err := getRangeArrayForConfig(asn)
+	ranges := GenerateRangeForConfigFile(asn, prefixes)
 
-	if err != nil {
-		return "", err
-	}
-
-	log.Println("Prefix count is:", len(prfx))
-
-	if len(prfx) <= 0 {
+	if len(ranges) <= 0 {
 		msg := fmt.Sprintf("Prefixes is empty this ASN: %s", asn)
 		return "", fmt.Errorf(msg)
 	}
 
-	rangeLines := strings.Join(prfx, "\n")
+	rangeLines := strings.Join(ranges, "\n")
 	tmplTxt = fmt.Sprintf("%s\n%s", tmplTxt, rangeLines)
 
 	err = CreateFile(fileName)
@@ -528,4 +547,26 @@ func WriteAllText(filePath string, text string) error {
 	err = file.Sync()
 
 	return err
+}
+
+func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, session mgo.Session) {
+	sm := Summary{}
+	sm.Date = time.Now()
+	sm.Asn = asn
+
+	//Ripe API
+	sm.AsnName = ""
+	sm.Description = ""
+
+	sm.Ipv4Prefix = len(ipv4Prefixes)
+	sm.Ipv6Prefix = len(ipv6Prefixes)
+	sm.TotalPrefix = sm.Ipv4Prefix + sm.Ipv6Prefix
+	sm.TotalIpv4 = GetTotalIpCountByIpv4Prefixes(ipv4Prefixes)
+	sm.ActiveIp4 = 0
+
+	err := session.DB(rip_db_name).C("reports").Insert(&sm)
+
+	if err != nil {
+		log.Println(err)
+	}
 }
