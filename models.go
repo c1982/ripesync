@@ -178,44 +178,45 @@ type Summary struct {
 	Ipv4Prefix  int
 	Ipv6Prefix  int
 	TotalIpv4   int
-	ActiveIp4   int
+	ActiveIp4   float64
 
-	Windows  int
-	Linux    int
-	RouterOs int
+	Windows  float64
+	Linux    float64
+	RouterOs float64
 
-	Ftp        int
-	Ssh        int
-	Telnet     int
-	Smtp       int
-	Dns        int
-	Http       int
-	Pop3       int
-	Imap       int
-	Snmp       int
-	Rdp        int
-	Sip        int
-	PowerShell int
-	WebDeploy  int
+	Ftp        float64
+	Ssh        float64
+	Telnet     float64
+	Smtp       float64
+	SmtpAuth   float64
+	Dns        float64
+	Http       float64
+	Pop3       float64
+	Imap       float64
+	Snmp       float64
+	Rdp        float64
+	Sip        float64
+	PowerShell float64
+	WebDeploy  float64
 
-	WestaCp      int
-	DirectAdmin  int
-	Plesk        int
-	WebsitePanel int
-	MaestroPanel int
-	CPanel       int
-	CPanelSSL    int
-	CPanelWHM    int
-	CPanelWHMSSL int
-	Ajenti       int
-	Webmin       int
-	HstCntr      int
+	VestaCp      float64
+	DirectAdmin  float64
+	Plesk        float64
+	WebsitePanel float64
+	MaestroPanel float64
+	CPanel       float64
+	CPanelSSL    float64
+	CPanelWHM    float64
+	CPanelWHMSSL float64
+	Ajenti       float64
+	Webmin       float64
+	HstCntr      float64
 
-	MsSQL      int
-	MySQL      int
-	MongoDB    int
-	PostgreSQL int
-	Redis      int
+	MsSQL      float64
+	MySQL      float64
+	MongoDB    float64
+	PostgreSQL float64
+	Redis      float64
 }
 
 type TotalAsnStat struct {

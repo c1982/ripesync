@@ -39,6 +39,24 @@ func main() {
 
 	session.DB(rip_db_name).Login("admin", "Osman12!")
 	session.SetMode(mgo.Monotonic, true)
+	session.DB(rip_db_name).Run(bson.M{"eval": "db.loadServerScripts();"}, nil)
+
+	/*
+		index := mgo.Index{
+			Key:        []string{"asn", "ip"},
+			Unique:     false,
+			DropDups:   false,
+			Background: true,
+			Sparse:     true,
+		}
+
+		err = session.DB(rip_db_name).C("hostactivity").EnsureIndex(index)
+
+		if err != nil {
+			panic(err)
+		}
+	*/
+
 	defer session.Close()
 
 	if *scanAsn {
@@ -48,12 +66,12 @@ func main() {
 		}
 
 		log.Printf("Country:", *country)
-		log.Println("Begin as scanning.")
+		log.Println("Begin ASN scanning.")
 
 		//begin
 		ScanAsNumbers(*country, *session)
 
-		log.Println("End as scanning.")
+		log.Println("End ASN scanning.")
 	}
 
 	if *syncdb {
@@ -558,7 +576,6 @@ func WriteAllText(filePath string, text string) error {
 func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, session mgo.Session) {
 
 	var db = session.DB(rip_db_name)
-	var gcnt map[string]float64
 
 	adetail, err := getAsDetail(asn)
 
@@ -580,37 +597,45 @@ func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, sessio
 	sm.Ipv6Prefix = len(ipv6Prefixes)
 	sm.TotalPrefix = sm.Ipv4Prefix + sm.Ipv6Prefix
 	sm.TotalIpv4 = GetTotalIpCountByIpv4Prefixes(ipv4Prefixes)
+	sm.ActiveIp4 = GetActiveIpCountByAsn(asn, db)
 
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetActiveIpCountByAsn(%s);", asn)}, &gcnt)
+	sm.Windows = GetIPCountByTTLRange(asn, 109, 128, db)
+	sm.Linux = GetIPCountByTTLRange(asn, 48, 64, db)
+	sm.RouterOs = GetIPCountByTTLRange(asn, 235, 254, db)
 
-	if err == nil {
-		sm.ActiveIp4 = gcnt["retval"]
-	}
+	sm.Ftp = GetIPCountByPortNumber(asn, 21, db)
+	sm.Ssh = GetIPCountByPortNumber(asn, 22, db)
+	sm.Telnet = GetIPCountByPortNumber(asn, 23, db)
+	sm.Smtp = GetIPCountByPortNumber(asn, 25, db)
+	sm.Dns = GetIPCountByPortNumber(asn, 53, db)
+	sm.Http = GetIPCountByPortNumber(asn, 80, db)
+	sm.Pop3 = GetIPCountByPortNumber(asn, 110, db)
+	sm.Imap = GetIPCountByPortNumber(asn, 143, db)
+	sm.Snmp = GetIPCountByPortNumber(asn, 161, db)
+	sm.SmtpAuth = GetIPCountByPortNumber(asn, 587, db)
+	sm.Rdp = GetIPCountByPortNumber(asn, 3389, db)
+	sm.Sip = GetIPCountByPortNumber(asn, 5060, db)
+	sm.PowerShell = GetIPCountByPortNumber(asn, 5985, db)
+	sm.WebDeploy = GetIPCountByPortNumber(asn, 8172, db)
 
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",109,128);", asn)}, &gcnt)
+	sm.VestaCp = GetIPCountByPortNumber(asn, 8083, db)
+	sm.DirectAdmin = GetIPCountByPortNumber(asn, 2222, db)
+	sm.Plesk = GetIPCountByPortNumber(asn, 8443, db)
+	sm.WebsitePanel = GetIPCountByPortNumber(asn, 9001, db)
+	sm.MaestroPanel = GetIPCountByPortNumber(asn, 9715, db)
+	sm.CPanel = GetIPCountByPortNumber(asn, 2082, db)
+	sm.CPanelSSL = GetIPCountByPortNumber(asn, 2083, db)
+	sm.CPanelWHM = GetIPCountByPortNumber(asn, 2086, db)
+	sm.CPanelWHMSSL = GetIPCountByPortNumber(asn, 2087, db)
+	sm.Ajenti = GetIPCountByPortNumber(asn, 8000, db)
+	sm.Webmin = GetIPCountByPortNumber(asn, 10000, db)
+	sm.HstCntr = GetIPCountByPortNumber(asn, 8787, db)
 
-	if err == nil {
-		sm.Windows = gcnt
-	}
-
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",48,64);", asn)}, &gcnt)
-
-	if err == nil {
-		sm.Linux = gcnt
-	}
-
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",235,254);", asn)}, &gcnt)
-
-	if err == nil {
-		sm.RouterOs = gcnt
-	}
-
-	//FTP
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByPortNumber(\"%s\",21);", asn)}, &gcnt)
-
-	if err == nil {
-		sm.Ftp = gcnt
-	}
+	sm.MsSQL = GetIPCountByPortNumber(asn, 1433, db)
+	sm.MySQL = GetIPCountByPortNumber(asn, 3306, db)
+	sm.MongoDB = GetIPCountByPortNumber(asn, 27017, db)
+	sm.PostgreSQL = GetIPCountByPortNumber(asn, 5432, db)
+	sm.Redis = GetIPCountByPortNumber(asn, 6379, db)
 
 	//Save
 	err = db.C("reports").Insert(&sm)
@@ -618,4 +643,58 @@ func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, sessio
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func GetIPCountByTTLRange(asn string, gte int, lt int, db *mgo.Database) float64 {
+	var cnt float64 = 0
+	var gcnt bson.M
+
+	err := db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",%d,%d);", asn, gte, lt)}, &gcnt)
+
+	if err == nil {
+		cnt = getCount(gcnt)
+	}
+
+	return cnt
+}
+
+func GetActiveIpCountByAsn(asn string, db *mgo.Database) float64 {
+	var cnt float64 = 0
+	var gcnt bson.M
+
+	err := db.Run(bson.M{"eval": fmt.Sprintf("GetActiveIpCountByAsn(\"%s\");", asn)}, &gcnt)
+
+	if err == nil {
+		cnt = getCount(gcnt)
+	}
+
+	return cnt
+}
+
+func GetIPCountByPortNumber(asn string, port int, db *mgo.Database) float64 {
+	var cnt float64 = 0
+	var gcnt bson.M
+
+	err := db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByPortNumber(\"%s\",%d);", asn, port)}, &gcnt)
+
+	if err == nil {
+		cnt = getCount(gcnt)
+	}
+
+	return cnt
+}
+
+func getCount(query bson.M) float64 {
+
+	m := query["retval"].(bson.M)
+	m1 := m["_batch"].([]interface{})
+
+	if len(m1) == 0 {
+		return 0
+	}
+
+	m2 := m1[0].(bson.M)
+
+	return m2["count"].(float64)
+
 }
