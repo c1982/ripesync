@@ -11,6 +11,7 @@ import (
 const (
 	ANNOUNCED_URL = "https://stat.ripe.net/data/announced-prefixes/data.json?resource=%s"
 	RESOURCES_URL = "https://stat.ripe.net/data/country-resource-list/data.json?resource=%s"
+	REGISTRY_URL  = "https://stat.ripe.net/data/registry-browser/data.json?include_backward_refs=0&resource=%s"
 )
 
 func getJsonData(uri string) (string, error) {
@@ -64,6 +65,27 @@ func getPrefixes(asn string) (ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, err 
 func getAsNumbers(country string) (Announcement, error) {
 	anon := Announcement{}
 	uri := fmt.Sprintf(RESOURCES_URL, country)
+
+	log.Println(uri)
+
+	jsonData, err := getJsonData(uri)
+
+	if err != nil {
+		return anon, err
+	}
+
+	err = json.Unmarshal([]byte(jsonData), &anon)
+
+	if err != nil {
+		return anon, err
+	}
+
+	return anon, err
+}
+
+func getAsDetail(asn string) (Announcement, error) {
+	anon := Announcement{}
+	uri := fmt.Sprintf(REGISTRY_URL, asn)
 
 	log.Println(uri)
 

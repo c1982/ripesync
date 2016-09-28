@@ -98,6 +98,35 @@ type Announcement struct {
 	Data           AnnouncedData `json:"data"`
 }
 
+func (r *Announcement) GetObjValue(keyName string) string {
+
+	result := ""
+	if len(r.Data.Objects) > 0 {
+		for _, f := range r.Data.Objects[0].Fields {
+			if f.ObjKey == keyName {
+				result = f.ObjValue
+				break
+			}
+		}
+	}
+
+	return result
+}
+
+func (r *Announcement) GetFrwValue(keyName string) string {
+	result := ""
+	if len(r.Data.ForwardRefs) > 0 {
+		for _, f := range r.Data.ForwardRefs[0].Fields {
+			if f.ObjKey == keyName {
+				result = f.ObjValue
+				break
+			}
+		}
+	}
+
+	return result
+}
+
 type AnnouncedData struct {
 	Resource       string       `json:"resource"`
 	Prefixes       []Prefix     `json:"prefixes"`
@@ -106,6 +135,17 @@ type AnnouncedData struct {
 	LatestTime     string       `json:"latest_time"`
 	QueryEndtime   string       `json:"query_endtime"`
 	EarliestTime   string       `json:"earliest_time"`
+	Objects        []DataObject `json:"objects"`
+	ForwardRefs    []DataObject `json:"forward_refs"`
+}
+
+type DataObject struct {
+	Fields []ObjectField `json:"fields"`
+}
+
+type ObjectField struct {
+	ObjValue string `json:"value"`
+	ObjKey   string `json:"key"`
 }
 
 type ResourceData struct {
@@ -125,10 +165,14 @@ type TimeLine struct {
 }
 
 type Summary struct {
-	Date        time.Time
-	Asn         string
-	AsnName     string
-	Description string
+	Date time.Time
+
+	Asn       string
+	AsnName   string
+	Org       string
+	OrgName   string
+	OrgType   string
+	MntRoutes string
 
 	TotalPrefix int
 	Ipv4Prefix  int

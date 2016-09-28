@@ -185,6 +185,334 @@ const (
         }
     }
 }`
+
+	TEXT_JSON_REGISTRY_BROWSER = `{
+    "status": "ok", 
+    "server_id": "stat-app8", 
+    "status_code": 200, 
+    "version": "0.3", 
+    "cached": false, 
+    "see_also": [], 
+    "time": "2016-09-27T20:09:23.736710", 
+    "messages": [], 
+    "data_call_status": "supported", 
+    "process_time": 148, 
+    "build_version": "2016.9.26.140", 
+    "query_id": "489056de-84ee-11e6-aea0-0050568835e6", 
+    "data": {
+        "num_versions": 38, 
+        "resource": "AS42926", 
+        "backward_refs": [], 
+        "database": "RIPE", 
+        "versions": [
+            [
+                "2007-05-10T11:58:49", 
+                "2009-10-16T11:42:48"
+            ], 
+            [
+                "2016-08-15T06:24:55", 
+                "2016-09-27T00:00:00"
+            ]
+        ], 
+        "suggestions": [], 
+        "complete_history": false, 
+        "objects": [
+            {
+                "fields": [
+                    {
+                        "references": [], 
+                        "value": "AS42926", 
+                        "key": "aut-num"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "RADORE", 
+                        "key": "as-name"
+                    }, 
+                    {
+                        "references": [
+                            "organisation"
+                        ], 
+                        "value": "ORG-RHTH1-RIPE", 
+                        "key": "org"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "RLA11-RIPE", 
+                        "key": "admin-c"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "RLA11-RIPE", 
+                        "key": "tech-c"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "MNT-AS42926", 
+                        "key": "mnt-by"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "RIPE-NCC-END-MNT", 
+                        "key": "mnt-by"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "MNT-AS42926", 
+                        "key": "mnt-routes"
+                    }
+                ], 
+                "type": "aut-num", 
+                "primary": {
+                    "value": "AS42926", 
+                    "key": "aut-num"
+                }
+            }
+        ], 
+        "time": "2016-09-27T20:09:23", 
+        "forward_refs": [
+            {
+                "relationships": [
+                    "org"
+                ], 
+                "fields": [
+                    {
+                        "references": [], 
+                        "value": "ORG-RHTH1-RIPE", 
+                        "key": "organisation"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "Radore Veri Merkezi Hizmetleri A.S.", 
+                        "key": "org-name"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "LIR", 
+                        "key": "org-type"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "YD868-RIPE", 
+                        "key": "admin-c"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "ZKA2-RIPE", 
+                        "key": "admin-c"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "RARA7-RIPE", 
+                        "key": "abuse-c"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "RIPE-NCC-HM-MNT", 
+                        "key": "mnt-ref"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "AS42926-MNT", 
+                        "key": "mnt-ref"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "RIPE-NCC-HM-MNT", 
+                        "key": "mnt-by"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "AS42926-MNT", 
+                        "key": "mnt-by"
+                    }
+                ], 
+                "type": "organisation", 
+                "primary": {
+                    "value": "ORG-RHTH1-RIPE", 
+                    "key": "organisation"
+                }
+            }, 
+            {
+                "relationships": [
+                    "admin-c", 
+                    "tech-c"
+                ], 
+                "fields": [
+                    {
+                        "references": [], 
+                        "value": "RADORE LIR", 
+                        "key": "role"
+                    }, 
+                    {
+                        "references": [
+                            "organisation"
+                        ], 
+                        "value": "ORG-RHTH1-RIPE", 
+                        "key": "org"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "RNOC6-RIPE", 
+                        "key": "admin-c"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "RNOC6-RIPE", 
+                        "key": "tech-c"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "RLA11-RIPE", 
+                        "key": "nic-hdl"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "abuse@radore.com", 
+                        "key": "abuse-mailbox"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "AS42926-MNT", 
+                        "key": "mnt-by"
+                    }
+                ], 
+                "type": "role", 
+                "primary": {
+                    "value": "RLA11-RIPE", 
+                    "key": "nic-hdl"
+                }
+            }, 
+            {
+                "relationships": [
+                    "mnt-by", 
+                    "mnt-routes"
+                ], 
+                "fields": [
+                    {
+                        "references": [], 
+                        "value": "MNT-AS42926", 
+                        "key": "mntner"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "AS42926", 
+                        "key": "descr"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "RLA11-RIPE", 
+                        "key": "admin-c"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "MNT-AS42926", 
+                        "key": "mnt-by"
+                    }
+                ], 
+                "type": "mntner", 
+                "primary": {
+                    "value": "MNT-AS42926", 
+                    "key": "mntner"
+                }
+            }, 
+            {
+                "relationships": [
+                    "mnt-by"
+                ], 
+                "fields": [
+                    {
+                        "references": [], 
+                        "value": "RIPE-NCC-END-MNT", 
+                        "key": "mntner"
+                    }, 
+                    {
+                        "references": [], 
+                        "value": "RIPE-NCC IPRA Maintainer for all direct resources", 
+                        "key": "descr"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "CREW-RIPE", 
+                        "key": "admin-c"
+                    }, 
+                    {
+                        "references": [
+                            "person", 
+                            "role"
+                        ], 
+                        "value": "CREW-RIPE", 
+                        "key": "tech-c"
+                    }, 
+                    {
+                        "references": [
+                            "organisation"
+                        ], 
+                        "value": "ORG-NCC1-RIPE", 
+                        "key": "org"
+                    }, 
+                    {
+                        "references": [
+                            "mntner"
+                        ], 
+                        "value": "RIPE-NCC-END-MNT", 
+                        "key": "mnt-by"
+                    }
+                ], 
+                "type": "mntner", 
+                "primary": {
+                    "value": "RIPE-NCC-END-MNT", 
+                    "key": "mntner"
+                }
+            }
+        ], 
+        "now": "2016-09-27T20:09:23", 
+        "type": "aut-num", 
+        "truncated": false
+    }
+}`
 )
 
 /*
@@ -262,6 +590,31 @@ func TestResourcesUnMarshalling(t *testing.T) {
 	}
 }
 
+func TestRegistryBrowserUnmarshalling(t *testing.T) {
+	anon := Announcement{}
+	err := json.Unmarshal([]byte(TEXT_JSON_REGISTRY_BROWSER), &anon)
+
+	if err != nil {
+		t.Errorf("Unmarshalling Error:", err)
+	}
+
+	field := anon.Data.Objects[0].Fields[1]
+
+	if field.ObjKey != "as-name" {
+		t.Error("Invalid object key:", field.ObjKey)
+	}
+
+	if field.ObjValue != "RADORE" {
+		t.Error("Invalid object value:", field.ObjValue)
+	}
+
+	FrwRef := anon.Data.ForwardRefs[0].Fields[1]
+	t.Log(FrwRef.ObjValue)
+	if FrwRef.ObjKey != "org-name" {
+		t.Error("Invalid object key:", FrwRef.ObjKey)
+	}
+}
+
 func TestReadTemplateFile(t *testing.T) {
 	fileTxt, err := readTemplateFile()
 
@@ -275,9 +628,17 @@ func TestReadTemplateFile(t *testing.T) {
 }
 
 func TestGenerateConfigFile(t *testing.T) {
+
+	anon := Announcement{}
+	err := json.Unmarshal([]byte(TEXT_JSON_PREFIX_DATA), &anon)
+
+	if err != nil {
+		t.Errorf("Unmarshalling Error:", err)
+	}
+
 	fileTxt, _ := readTemplateFile()
 
-	configFile, err := GenerateConfig("AS43260")
+	configFile, err := GenerateConfig("AS43260", anon.Data.Prefixes)
 
 	t.Logf("Config file name:", configFile)
 

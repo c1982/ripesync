@@ -1,4 +1,4 @@
-rate =     100.00
+rate =     10000
 randomize-hosts = true
 seed = 2470080484105146349
 shard = 1/1

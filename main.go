@@ -37,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	session.DB(rip_db_name).Login("admin", "")
+	session.DB(rip_db_name).Login("admin", "Osman12!")
 	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
 
@@ -83,8 +83,8 @@ func ScanAsNumbers(country string, session mgo.Session) {
 	asns.Ipv4Prefix = len(anon.Data.Resources.IPv4)
 
 	log.Println("Total ASN :", asns.AsnCount)
-	log.Println("Total IPv6 Prefix :", asns.Ipv6Prefix)
 	log.Println("Total IPv4 Prefix :", asns.Ipv4Prefix)
+	log.Println("Total IPv6 Prefix :", asns.Ipv6Prefix)
 
 	//Save
 	err = session.DB(rip_db_name).C("asn_country_stats").Insert(&asns)
@@ -111,7 +111,7 @@ func ScanAsNumbers(country string, session mgo.Session) {
 		cnfFile, err := GenerateConfig(asn, ipv4prefixes)
 
 		if err != nil {
-			//deleteFile(asnFile)
+			deleteFile(cnfFile)
 			log.Println("Config file cannot genereted.", err)
 			continue
 		}
@@ -120,19 +120,19 @@ func ScanAsNumbers(country string, session mgo.Session) {
 		err = executeScan(cnfFile, scanoutput)
 		if err != nil {
 			log.Println("Scan error: ", err)
-			//deleteFile(asnFile)
+			deleteFile(scanoutput)
+			deleteFile(cnfFile)
 			continue
 		}
 
 		//save mongodb
 		SyncScanFile(scanoutput, session, asn)
 
-		//deleteFile(asnFile)
-		//deleteFile(scanoutput)
+		deleteFile(cnfFile)
+		deleteFile(scanoutput)
 
 		//Save Summary
 		saveReport(asn, ipv4prefixes, ipv6prefixes, session)
-
 	}
 }
 
@@ -558,51 +558,58 @@ func WriteAllText(filePath string, text string) error {
 func saveReport(asn string, ipv4Prefixes []Prefix, ipv6Prefixes []Prefix, session mgo.Session) {
 
 	var db = session.DB(rip_db_name)
-	var genericCount = 0
+	var gcnt map[string]float64
+
+	adetail, err := getAsDetail(asn)
+
+	if err != nil {
+		log.Println("ASN detail cannot be determine:", err)
+	}
 
 	sm := Summary{}
 	sm.Date = time.Now()
-	sm.Asn = asn
 
-	//Ripe API
-	sm.AsnName = ""
-	sm.Description = ""
+	sm.Asn = asn
+	sm.AsnName = adetail.GetObjValue("as-name")
+	sm.Org = adetail.GetObjValue("org")
+	sm.OrgName = adetail.GetFrwValue("org-name")
+	sm.OrgType = adetail.GetFrwValue("org-type")
+	sm.MntRoutes = adetail.GetObjValue("mnt-routes")
 
 	sm.Ipv4Prefix = len(ipv4Prefixes)
 	sm.Ipv6Prefix = len(ipv6Prefixes)
 	sm.TotalPrefix = sm.Ipv4Prefix + sm.Ipv6Prefix
 	sm.TotalIpv4 = GetTotalIpCountByIpv4Prefixes(ipv4Prefixes)
-	sm.ActiveIp4 = 0
 
-	err := db.Run(bson.M{"eval": fmt.Sprintf("GetActiveIpCountByAsn(%s);", asn)}, &genericCount)
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetActiveIpCountByAsn(%s);", asn)}, &gcnt)
 
 	if err == nil {
-		sm.ActiveIp4 = genericCount
+		sm.ActiveIp4 = gcnt["retval"]
 	}
 
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",109,128);", asn)}, &genericCount)
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",109,128);", asn)}, &gcnt)
 
 	if err == nil {
-		sm.Windows = genericCount
+		sm.Windows = gcnt
 	}
 
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",48,64);", asn)}, &genericCount)
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",48,64);", asn)}, &gcnt)
 
 	if err == nil {
-		sm.Linux = genericCount
+		sm.Linux = gcnt
 	}
 
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",235,254);", asn)}, &genericCount)
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByTTLRange(\"%s\",235,254);", asn)}, &gcnt)
 
 	if err == nil {
-		sm.RouterOs = genericCount
+		sm.RouterOs = gcnt
 	}
 
 	//FTP
-	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByPortNumber(\"%s\",21);", asn)}, &genericCount)
+	err = db.Run(bson.M{"eval": fmt.Sprintf("GetIPCountByPortNumber(\"%s\",21);", asn)}, &gcnt)
 
 	if err == nil {
-		sm.Ftp = genericCount
+		sm.Ftp = gcnt
 	}
 
 	//Save
